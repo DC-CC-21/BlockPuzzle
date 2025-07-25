@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content="an awesome webpage" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="author" content="author" />
+    <title>Document</title>
+    <link rel="stylesheet" type="text/css" href="./styles/style.css" />
+    <script src="scripts/scripts.js" type="module"></script>
+  </head>
+  <body>
+    <nav>
+      <div class="rotateIcons">
+        <div class="rotateIcon x">
+          <img src="./images/rotate.png" alt="Rotate X" />
+          <span>X</span>
+        </div>
+        <div class="rotateIcon y">
+          <img src="./images/rotate.png" alt="Rotate X" />
+          <span>Y</span>
+        </div>
+        <div class="rotateIcon z">
+          <img src="./images/rotate.png" alt="Rotate X" />
+          <span>Z</span>
+        </div>
+      </div>
+      <div id="buttons">
+        <button type="button" id="place">PLACE</button>
+        <button type="button" id="removePiece">REMOVE</button>
+        <button type="button" id="toggleCube">Toggle Cube</button>
+        <button type="button" id="returnPiece">Replace</button>
+      </div>
+    </nav>
+    <div id="canvas"></div>
+    <span id="loading">Loading... %</span>
+  </body>
+</html>
