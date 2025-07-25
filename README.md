@@ -99,6 +99,7 @@ Write something here about new refinements.
 Something like:
 
 - Why the pieces were separated into different files
+- Shrinking textures and compressing files
 
 ## Designing Cards
 
