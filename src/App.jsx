@@ -4,7 +4,7 @@ import CardList from "./scripts/Home";
 import Cube from "./scripts/Cube";
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/BlockPuzzle">
       <Routes>
         <Route path="/" element={<CardList />} />
         <Route path="/cube" element={<Cube />} />

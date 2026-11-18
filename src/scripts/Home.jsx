@@ -1,36 +1,5 @@
 import React from "react";
-// import { createRoot } from "react-dom/client";
-
-// const root = createRoot(document.querySelector("body"));
-
-const cardData = [
-  {
-    id: 1,
-    level: 1,
-    pieces: {
-      1: "A",
-      3: "B",
-      3: "C",
-      4: "D",
-      6: "E",
-      2: "F",
-      11: "G",
-    },
-  },
-  {
-    id: 2,
-    level: 1,
-    pieces: {
-      4: "A",
-      6: "B",
-      1: "C",
-      3: "D",
-      6: "E",
-      2: "F",
-      7: "G",
-    },
-  },
-];
+import { data as cardData } from "../data";
 
 export default function CardList() {
   return (

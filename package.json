@@ -4,8 +4,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build",
+    "build": "vite build && npm run postbuild",
     "preview": "vite preview",
+    "deploy": "gh-pages -d dist",
+    "postbuild": "copy dist\\index.html dist\\404.html",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -19,5 +21,9 @@
     "three": "^0.178.0",
     "three-mesh-bvh": "^0.9.1",
     "vite": "^6.3.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
+    "vite-plugin-gh-pages": "^1.0.1"
   }
 }

@@ -1,11 +1,11 @@
 import { GLTFLoader } from "three/examples/jsm/Addons.js";
 import * as THREE from "three";
-import { MeshBVH, MeshBVHHelper } from "three-mesh-bvh";
 
 const loader = new GLTFLoader();
 
 export async function loadModel(url, loadingElement) {
-  return new Promise((resolve) => {
+  const name = url.split("/").pop();
+  return new Promise((resolve, reject) => {
     loader.load(
       url,
       (gltf) => {
@@ -14,16 +14,23 @@ export async function loadModel(url, loadingElement) {
       (xhr) => {
         if (loadingElement) {
           const percent = (xhr.loaded / xhr.total) * 100;
-          if (percent === 100) {
-            loadingElement.style.display = "none";
+          if (percent >= 100) {
+            // loadingElement.style.display = "none";
           } else {
-            loadingElement.textContent = `Loading... ${Math.round(percent)}%`;
+            loadingElement.textContent = `Loading ${name}... ${Math.round(
+              percent
+            )}%`;
           }
         }
+      },
+      (error) => {
+        console.log(`Failed to load ${url}`);
+        reject(error);
       }
     );
   });
 }
+
 export function getTargets(scene) {
   return scene.children
     .filter((child) => child.name.toLowerCase().includes("target"))
@@ -44,19 +51,6 @@ export function getCube(scene) {
       x.material = x.material.clone();
       x.material.transparent = true;
 
-      return x;
-    });
-}
-
-export function getPieces(scene) {
-  return scene.children
-    .filter((child) => child.name.toLowerCase().includes("piece"))
-    .map((x) => {
-      x.children[0].material = x.children[0].material.clone();
-      x.children[1].material = x.children[1].material.clone();
-      x.originalPosition = x.position.clone();
-      x.originalRotation = x.rotation.clone();
-      x.targetPosition = null;
       return x;
     });
 }

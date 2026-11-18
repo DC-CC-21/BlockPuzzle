@@ -9,13 +9,30 @@ import {
   UnrealBloomPass,
 } from "three/examples/jsm/Addons.js";
 import { data } from "../data";
+import {
+  ShowTargets,
+  HideTargets,
+  AnimatePieceMovement,
+  CheckCollision,
+  DeselectPiece,
+  ToggleCube,
+} from "./helpers";
+import { Piece } from "./Piece";
 export const main = async () => {
+  // =========== Game Setup =========== //
+  // Get the search params
   const searchParams = new URLSearchParams(window.location.search);
-  const id = searchParams.get("level");
-  const piecesObject = data.find((item) => item.id == id).pieces;
-  const pieceIds = Object.values(piecesObject).filter((x) => x !== "");
-  console.log(piecesObject, pieceIds);
 
+  // Get the level id from the search params
+  const id = searchParams.get("level");
+
+  // Locate the pieces and their locations from the data by the id
+  const piecesObject = data.find((item) => item.id == id).pieces;
+
+  // Get the id of the pieces from the pieces object
+  const pieceIds = Object.values(piecesObject).filter((x) => x !== "");
+
+  // ========== HTML Elements ========== //
   const loadingElement = document.getElementById("loading");
   const rxButton = document.querySelector(".rotateIcon.x");
   const ryButton = document.querySelector(".rotateIcon.y");
@@ -25,6 +42,7 @@ export const main = async () => {
   const returnPiece = document.querySelector("#returnPiece");
   const removePiece = document.querySelector("#removePiece");
 
+  // ========== Scene Setup ========== //
   function setupScene() {
     // Create a new scene
     const scene = new THREE.Scene();
@@ -95,218 +113,42 @@ export const main = async () => {
   const { scene, camera, renderer, controls, composer } = setupScene();
 
   // Load the model
-  const modelPath = "/models";
+  const modelPath = "models";
   const modelScene = await loadModel(
     `${modelPath}/Targets_W_Cube.glb`,
     loadingElement
   );
+  scene.add(modelScene.scene);
+  const axesHelper = new THREE.AxesHelper(10);
 
   const pieces = [];
   for (const [index, id] of pieceIds.entries()) {
-    const piece = (
-      await loadModel(`${modelPath}/Piece${id}.glb`, loadingElement)
+    const currentLoadingElement = document.createElement("span");
+    loadingElement.appendChild(currentLoadingElement);
+    const glbPiece = (
+      await loadModel(`${modelPath}/Piece${id}.glb`, currentLoadingElement)
     ).scene.children[0];
-    piece.position.set(40 + 10 * index, 0, 0);
+
+    const piece = new Piece(glbPiece, axesHelper);
+    piece.setPosition(40 + 10 * index, 0, 0);
     pieces.push(piece);
     scene.add(piece);
-  }
 
-  scene.add(modelScene.scene);
+    // piece.setPosition(40 + 10 * index, 0, 0);
+  }
+  loadingElement.style.display = "none";
 
   // Get targets, pieces, and cube
   const targets = getTargets(modelScene.scene);
   // const pieces = getPieces(modelScene.scene);
   const cube = getCube(modelScene.scene);
+  window._cube = cube;
 
   // Set the variable for the current piece
   let currentPiece;
-  const axesHelper = new THREE.AxesHelper(10);
 
   // ========== Render loop ========== //
   animate();
-
-  // ========== Effects and Helpers ========== //
-  function GlowPiece(piece) {
-    piece.children[0].material.emissive.set(0xffff00);
-    piece.children[0].material.emissiveIntensity = 0.5;
-    piece.traverse((child) => {
-      if (child.isMesh) {
-      }
-    });
-  }
-  function DeselectPiece() {
-    if (currentPiece) {
-      currentPiece.traverse((child) => {
-        if (child.isMesh) {
-          child.material.emissive.set(0x000000);
-          child.material.emissiveIntensity = 0;
-        }
-      });
-      currentPiece.remove(axesHelper);
-      currentPiece = null;
-    }
-  }
-  function ShowTargets() {
-    targets.forEach((x) => (x.material.opacity = 0.2));
-  }
-  function HideTargets() {
-    targets.forEach((x) => (x.material.opacity = 0));
-  }
-  function CheckCollision() {
-    // Remove previous debug spheres/arrows
-    if (window._debugCorners) {
-      window._debugCorners.forEach((sphere) => {
-        scene.remove(sphere);
-      });
-    }
-    window._debugCorners = [];
-
-    let collisionDetected = false;
-    for (const piece of pieces) {
-      if (piece.id === currentPiece.id) continue;
-
-      const meshA = currentPiece.children.find((child) => child.isMesh);
-      const { width, length } = PieceDimensions(piece);
-      const meshB = piece.children.find((child) => child.isMesh);
-
-      // Define +Z face corners in local space (assuming unit cube centered at origin)
-      const half = width / 2.1;
-      const offset = half * 0.5;
-      const faceCorners = [
-        new THREE.Vector3(0, 0, 0), // center
-        new THREE.Vector3(-half, -half, 0), // bottom-left
-        new THREE.Vector3(half, -half, 0), // bottom-right
-        new THREE.Vector3(-half, half, 0), // top-left
-        new THREE.Vector3(half, half, 0), // top-right
-
-        // Offset
-        new THREE.Vector3(-offset, 0, 0), // bottom-left
-        new THREE.Vector3(offset, 0, 0), // bottom-right
-        new THREE.Vector3(0, -offset, 0), // top-left
-        new THREE.Vector3(0, offset, 0), // top-right
-      ];
-
-      // Convert corners to world space
-      const worldCorners = faceCorners.map((corner) =>
-        meshA.localToWorld(corner.clone())
-      );
-
-      // --- Visualization: Add spheres at each worldCorner ---
-      worldCorners.forEach((corner, idx) => {
-        const sphereGeo = new THREE.SphereGeometry(0.5, 8, 8);
-        const sphereMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-        sphere.position.copy(corner);
-        scene.add(sphere);
-        window._debugCorners.push(sphere);
-
-        // Optional: add an ArrowHelper to show the +Z direction
-        const zDir = new THREE.Vector3(0, 0, 1)
-          .applyQuaternion(meshA.getWorldQuaternion(new THREE.Quaternion()))
-          .normalize();
-        const arrow = new THREE.ArrowHelper(zDir, corner, 5, 0xff0000);
-        scene.add(arrow);
-        window._debugCorners.push(arrow);
-      });
-
-      // Define direction in local space and convert to world direction
-      const zDir = new THREE.Vector3(0, 0, 1);
-      meshA.updateMatrixWorld();
-      zDir
-        .applyQuaternion(meshA.getWorldQuaternion(new THREE.Quaternion()))
-        .normalize();
-
-      // Raycasting from each corner
-      const raycaster = new THREE.Raycaster();
-      raycaster.far = length;
-      for (const corner of worldCorners) {
-        raycaster.set(corner, zDir);
-        const intersects = raycaster.intersectObject(meshB, true);
-        if (intersects.length > 0) {
-          console.log("Collision detected with piece:", piece);
-          intersects.forEach((intersectedPiece) => {
-            intersectedPiece.object.material.emissive.set(0xff0000);
-            intersectedPiece.object.material.emissiveIntensity = 0.5;
-          });
-          ToggleCube(0.2);
-          collisionDetected = true;
-        }
-      }
-    }
-    return collisionDetected ? "stop" : "continue";
-  }
-  function PieceDimensions(piece) {
-    const boundingBox = new THREE.Box3().setFromObject(piece);
-    const length = boundingBox.max.x - boundingBox.min.x;
-    const width = boundingBox.max.y - boundingBox.min.y;
-    const height = boundingBox.max.z - boundingBox.min.z;
-    return {
-      length: Math.max(length, width, height),
-      width: Math.min(length, width, height),
-    };
-  }
-  function AnimatePieceMovement(
-    piece,
-    targetPosition,
-    targetRotation,
-    duration = 500,
-    during = null,
-    after = null
-  ) {
-    if (!piece) return;
-    console.log(during, after);
-    const startPosition = piece.position.clone();
-    const startRotation = piece.rotation.clone();
-    const startTime = performance.now();
-
-    function RotationTo90(rotation) {
-      return new THREE.Euler(
-        Math.round(rotation.x / (Math.PI / 2)) * (Math.PI / 2),
-        Math.round(rotation.y / (Math.PI / 2)) * (Math.PI / 2),
-        Math.round(rotation.z / (Math.PI / 2)) * (Math.PI / 2)
-      );
-    }
-    function animate() {
-      const elapsed = performance.now() - startTime;
-      const t = Math.min(elapsed / duration, 1); // Normalize to [0, 1]
-
-      // Interpolate position and rotation
-      const currentPosition = piece.position.clone();
-      const currentRotation = piece.rotation.clone();
-      piece.position.lerpVectors(startPosition, targetPosition, t);
-      piece.rotation.x = THREE.MathUtils.lerp(
-        startRotation.x,
-        targetRotation.x,
-        t
-      );
-      piece.rotation.y = THREE.MathUtils.lerp(
-        startRotation.y,
-        targetRotation.y,
-        t
-      );
-      piece.rotation.z = THREE.MathUtils.lerp(
-        startRotation.z,
-        targetRotation.z,
-        t
-      );
-      if (during) {
-        if (during() === "stop") {
-          piece.position.copy(currentPosition);
-          piece.rotation.copy(currentRotation);
-          piece.rotation.copy(RotationTo90(piece.rotation));
-          after();
-          return;
-        }
-      }
-      if (t < 1) {
-        requestAnimationFrame(animate);
-      } else if (after) {
-        piece.rotation.copy(RotationTo90(piece.rotation));
-        after();
-      }
-    }
-    animate();
-  }
 
   // ========== Event listeners ========== //
   let mouseMoved = false;
@@ -331,16 +173,18 @@ export const main = async () => {
       ...targets,
     ]);
     const intersectTarget = intersects?.[0]?.object;
+    console.log(intersects);
     if (intersects.length === 0) {
       // If no target or piece is clicked, deselect the current piece and reset the targets
-      DeselectPiece();
-      HideTargets();
+      DeselectPiece(currentPiece);
+      HideTargets(targets);
       return;
     } else if (intersectTarget.name === cube[0].name) {
       return;
     }
     // Check if a piece is clicked
     if (intersectTarget.name.toLowerCase().includes("piece")) {
+      console.log("Piece Clicked");
       // Set the current piece
       currentPiece = intersectTarget.parent;
 
@@ -353,11 +197,12 @@ export const main = async () => {
           }
         });
       });
-      GlowPiece(currentPiece);
-      ShowTargets();
+      currentPiece.setHighlight(true);
+      ShowTargets(targets);
 
       // Remove axes helper from the previous piece
-      currentPiece.add(axesHelper);
+      // currentPiece.axesHelper = axesHelper;
+      // currentPiece.add(axesHelper);
       return;
     } // If no piece is clicked, check if a target is clicked
     else if (
@@ -366,6 +211,9 @@ export const main = async () => {
     ) {
       // Reset the opacity of all targets and set the clicked target to full opacity
       targets.forEach((x) => (x.material.opacity = 0.2));
+
+      // Log the normal of the clicked target's face
+      console.log(intersectTarget);
 
       const currentTarget = intersectTarget;
       currentPiece.targetPosition = currentTarget.position.clone();
@@ -421,7 +269,7 @@ export const main = async () => {
       targetRotation,
       200,
       () => {
-        return CheckCollision();
+        return CheckCollision(currentPiece, pieces, scene);
       },
       () => {
         element.disabled = false; // Re-enable the button after the animation to prevent multiple clicks that would stack animations
@@ -442,10 +290,12 @@ export const main = async () => {
     const height = boundingBox.max.z - boundingBox.min.z;
 
     // The direction of the piece's movement is based on its current y rotation
-    const direction = currentPiece.rotation.y < 0 ? -1 : 1;
-
+    const currentY = currentPiece.rotation.y < 0;
+    const currentX = currentPiece.rotation.x > 0;
+    const direction = currentY || currentX ? -1 : 1;
+    console.log(currentPiece.rotation, direction);
     // Remove the axes helper from the current piece
-    currentPiece.remove(axesHelper);
+    // currentPiece.remove(axesHelper);
 
     // Move the piece based on its dimensions and direction
     const targetPosition = currentPiece.position.clone();
@@ -469,13 +319,12 @@ export const main = async () => {
       500,
       () => {
         // While placing, check for collisions
-        console.log(currentPiece.targetPosition, currentPiece.position);
-        return CheckCollision();
+        return CheckCollision(currentPiece, pieces, scene);
       },
       () => {
         // After placing, deselect the piece, and hide targets
-        DeselectPiece();
-        HideTargets();
+        DeselectPiece(currentPiece);
+        HideTargets(targets);
       }
     );
   });
@@ -489,9 +338,6 @@ export const main = async () => {
       ToggleCube(0.2);
     }
   });
-  function ToggleCube(opacity) {
-    cube[0].material.opacity = opacity;
-  }
 
   // Return piece to original position
   returnPiece.addEventListener("click", () => {
@@ -520,11 +366,17 @@ export const main = async () => {
       500,
       () => {
         // While removing, check for collisions
-        return CheckCollision();
+        return CheckCollision(currentPiece, pieces, scene);
       },
       () => {
         DeselectPiece();
       }
     );
   }
+
+  window.onresize = function () {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  };
 };

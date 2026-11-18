@@ -1,24 +1,33 @@
-import React, { useEffect } from "react";
-import { main } from "./scripts";
+import React, { useEffect, useRef } from "react";
+import { main } from "./scene";
+// import { main } from "./scripts";
+
 export default function Cube() {
+  const ref = useRef(null);
   useEffect(() => {
-    main();
-  });
+    if (ref.current) {
+      //   (async () => {
+      //     const main = (await import("./scene")).main;
+      main();
+      //   })();
+    }
+    // main();
+  }, [ref]);
 
   return (
     <>
       <nav>
         <div className="rotateIcons">
-          <div className="rotateIcon x">
-            <img src="/images/rotate.png" alt="Rotate X" />
+          <div className="rotateIcon x hidden">
+            <img src="images/rotate.png" alt="Rotate X" />
             <span>X</span>
           </div>
-          <div className="rotateIcon y">
-            <img src="/images/rotate.png" alt="Rotate X" />
+          <div className="rotateIcon y hidden">
+            <img src="images/rotate.png" alt="Rotate X" />
             <span>Y</span>
           </div>
           <div className="rotateIcon z">
-            <img src="/images/rotate.png" alt="Rotate X" />
+            <img src="images/rotate.png" alt="Rotate X" />
             <span>Z</span>
           </div>
         </div>
@@ -37,7 +46,7 @@ export default function Cube() {
           </button>
         </div>
       </nav>
-      <div id="canvas"></div>
+      <div id="canvas" ref={ref}></div>
       <span id="loading">Loading... %</span>
     </>
   );
